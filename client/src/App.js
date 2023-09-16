@@ -82,22 +82,18 @@ function App() {
   };
 
   const toggleCompletion = (taskToToggle) => {
-    const { task, position, completed } = taskToToggle;
-  
-    Axios.put(`http://localhost:3001/api/update/${task}`, {
-      newTask: task,
-      position,
-      completed: !completed  // Đảo ngược trạng thái hoàn thành
+    Axios.put(`http://localhost:3001/api/update/${taskToToggle.task}`, {
+      newTask: taskToToggle.task,
     })
       .then((response) => {
         if (response.data.success) {
           const updatedTaskList = taskList.map((taskItem) => {
-            if (taskItem.task === task) {
-              return { ...taskItem, completed: !completed };
+            if (taskItem.task === taskToToggle.task) {
+              return { ...taskItem, completed: !taskItem.completed };
             }
             return taskItem;
           });
-  
+
           setTaskList(updatedTaskList);
           setIsCleared(false);
         }
@@ -106,9 +102,6 @@ function App() {
         console.error("Error updating task:", error);
       });
   };
-  
-  
-  
 
   const handleKeyPress = (e) => {
     if (e.key === "Enter" && task.trim() !== "") {
@@ -121,7 +114,6 @@ function App() {
     setCompletedTasks(completedTasksCount);
     setTotalTasks(totalTasksCount);
   };
-
 
 return (
   <div className="container">
@@ -150,8 +142,11 @@ return (
         {warning && <p className="warning-message">{warning}</p>}
       </div>
       <ul id="list-container" style={{ clear: "both" }}>
-        {taskList.map((taskItem) => (
-          <li className={taskItem.completed ? "completed" : ""}>
+        {taskList.map((taskItem, index) => (
+          <li
+            key={taskItem.task}
+            className={taskItem.completed ? "completed" : ""}
+          >
             <span onClick={() => toggleCompletion(taskItem)}>
               {taskItem.task}
             </span>
@@ -165,6 +160,7 @@ return (
     </div>
   </div>
 );
-        }
+}
+
 
 export default App;

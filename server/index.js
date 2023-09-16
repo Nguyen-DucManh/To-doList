@@ -51,33 +51,13 @@ app.get("/api/get", (req, res) => {
   });
 });
 
-app.put("/api/toggle/:task", (req, res) => {
-  const taskToUpdate = req.params.task;
-
-  const toggleQuery = `
-    UPDATE addtask
-    SET completed = NOT completed
-    WHERE task = ?;
-  `;
-
-  db.query(toggleQuery, [taskToUpdate], (err, result) => {
-    if (err) {
-      console.error("Error toggling task:", err);
-      res.status(500).json({ error: "An error occurred while toggling the task." });
-    } else {
-      console.log("Toggled successfully");
-      res.json({ success: true });
-    }
-  });
-});
 
 
 app.post("/api/insert", (req, res) => {
   const task = req.body.task;
 
-  const insertQuery = "INSERT INTO addtask (task, position) VALUES (?, (SELECT IFNULL(MAX(position), 0) + 1 FROM addtask))";
-
-  db.query(insertQuery, [task], (err, result) => {
+  const sqlInsert = "INSERT INTO addtask (task) VALUES (?)";
+  db.query(sqlInsert, [task], (err, result) => {
     if (err) {
       console.log(err);
       res.status(500).json({ error: "An error occurred while inserting the task." });
@@ -88,17 +68,10 @@ app.post("/api/insert", (req, res) => {
   });
 });
 
-
 app.delete("/api/delete/:task", (req, res) => {
-  const taskToDelete = req.params.task;
-
-  const deleteQuery = `
-    DELETE FROM addtask WHERE task = ?;
-    SET @count = 0;
-    UPDATE addtask SET position = (@count := @count + 1);
-  `;
-
-  db.query(deleteQuery, [taskToDelete], (err, result) => {
+  const name = req.params.task;
+  const sqlDelete = "CALL DeleteAndUpdateId(?)";
+  db.query(sqlDelete, [name], (err, result) => {
     if (err) {
       console.log(err);
       res.status(500).json({ error: "An error occurred while deleting the task." });
@@ -108,7 +81,6 @@ app.delete("/api/delete/:task", (req, res) => {
     }
   });
 });
-
 
 app.delete("/api/clear", (req, res) => {
   const sqlDelete = "DELETE FROM addtask";
@@ -136,10 +108,9 @@ app.delete("/api/clear", (req, res) => {
 app.put("/api/update/:task", (req, res) => {
   const taskToUpdate = req.params.task;
   const newTask = req.body.newTask;
-  const position = req.body.position;
 
-  const sqlUpdate = "UPDATE addtask SET task = ?, position = ? WHERE task = ?";
-  db.query(sqlUpdate, [newTask, position, taskToUpdate], (err, result) => {
+  const sqlUpdate = "UPDATE addtask SET task = ? WHERE task = ?";
+  db.query(sqlUpdate, [newTask, taskToUpdate], (err, result) => {
     if (err) {
       console.log(err);
       res.status(500).json({ error: "An error occurred while updating the task." });
@@ -148,33 +119,6 @@ app.put("/api/update/:task", (req, res) => {
       res.json({ success: true });
     }
   });
-});
-
-
-app.put("/api/reorder", (req, res) => {
-const { tasks } = req.body;
-const updateTasksSQL = 'UPDATE addtask SET position = ? WHERE task = ?';
-
-tasks.forEach((taskName, index) => {
-  db.query(updateTasksSQL, [index, taskName], (err, result) => {
-    if (err) {
-      db.rollback(() => {
-        throw err;
-      });
-    }
-  });
-});
-
-db.commit((err) => {
-  if (err) {
-    db.rollback(() => {
-      throw err;
-    });
-  }
-  console.log('Tasks order updated');
-  res.sendStatus(200);
-});
-
 }); 
 
 
